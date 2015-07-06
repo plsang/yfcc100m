@@ -34,6 +34,7 @@ class Video(IsDescription):
     description     = StringCol(512)   # 16-character String
     user_tags       = StringCol(128)   # 16-character String
     machine_tags    = StringCol(128)   # 16-character String
+    part_id         = Int8Col()      
     
     
             
@@ -48,15 +49,15 @@ if __name__ == '__main__':
     
     group = h5file.create_group("/", 'video', 'Yfcc100m video')
     
+    table_name = 'yfcc100m'
+        
+    table = h5file.create_table(group, table_name, Video, "Yfcc100m dataset")
+    
+    video = table.row
+        
     for part in parts:
         
         print 'Gen table for part', part
-        
-        table_name = 'yfcc100m_dataset_' + str(parts.index(part))
-        
-        table = h5file.create_table(group, table_name, Video, "Yfcc100m part")
-        
-        video = table.row
         
         meta_file = os.path.join(input_dir, part)
         
@@ -69,6 +70,7 @@ if __name__ == '__main__':
                     video['description'] = strip_tags(urllib.unquote_plus(info[7]))
                     video['user_tags'] = strip_tags(urllib.unquote_plus(info[8]))
                     video['machine_tags'] = strip_tags(urllib.unquote_plus(info[9]))
+                    video['part_id'] = parts.index(part)
                     video.append()
                     
         table.flush()
