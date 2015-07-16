@@ -25,7 +25,8 @@ class Video(IsDescription):
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Read YFCC100M tables')
-    parser.add_argument('--key', dest='key', help='keyword')
+    parser.add_argument('--key', dest='key', help='search by keyword')
+    parser.add_argument('--vid', dest='vid', help='search by video id')
     
     args = parser.parse_args()
     return args
@@ -38,10 +39,13 @@ if __name__ == '__main__':
     
     table = h5file.root.video.yfcc100m
     
-    rows = [(x['id'],x['part_id']) for x in table.where('contains(title,"' + args.key + '")') \
-        or x in table.where('contains(description,"' + args.key + '")') \
-        or x in table.where('contains(user_tags,"' + args.key + '")') \
-        or x in table.where('contains(machine_tags,"' + args.key + '")') ]
+    if args.key is not None:
+        rows = [(x['id'],x['part_id']) for x in table.where('contains(title,"' + args.key + '")') \
+            or x in table.where('contains(description,"' + args.key + '")') \
+            or x in table.where('contains(user_tags,"' + args.key + '")') \
+            or x in table.where('contains(machine_tags,"' + args.key + '")') ]
+    elif args.vid is not None:
+        rows = [(x['part_id']) for x in table.where('id=="' + args.vid + '"')]
     
     if len(rows) > 0:
         for row in rows:
