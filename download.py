@@ -5,10 +5,12 @@ import commands
 import string
 import random
 import os.path
+import urllib
 
 def resize(old_file, new_file):    
     
-    tmp_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m/tmp/resize'
+    tmp_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m/tmp'
+    #tmp_dir = '/tmp/plsang/resize'
     tmp_file = os.path.join(tmp_dir, os.path.basename(new_file))
         
     command = 'ffmpeg -i ' + old_file
@@ -99,7 +101,8 @@ if __name__ == '__main__':
     
     input_dir = '/net/per610a/export/das11f/plsang/dataset/YFCC100M'
     output_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m'
-    download_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m/tmp/download'
+    #download_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m/tmp/download'
+    download_dir = '/tmp'
     log_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m/log'
     
     log_file = os.path.join(log_dir, part + '.txt')
@@ -127,6 +130,7 @@ if __name__ == '__main__':
                 print '---- ', count, 'Downloading video', video_id, info[14]
                 
                 try:
+                    os.chdir(download_dir)
                     downloaded_file = wget.download(info[14], out=download_dir)
                 except:
                     print "Could not download file <%s>\n" % (info[14])
