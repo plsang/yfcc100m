@@ -1,5 +1,6 @@
 """
-Read a video
+Read an input video, do person detection,
+and save the detection outputs (e.g., bounding boxes) as a video.
 """
 
 import _init_paths
@@ -17,6 +18,8 @@ import argparse
 import json, h5py
 import logging
 from datetime import datetime
+import io
+import PIL
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +43,7 @@ def vis_detections(im, class_name, dets, thresh=0.5):
 
     im = im[:, :, (2, 1, 0)]
     fig, ax = plt.subplots(figsize=(12, 12))
-    new_im = ax.imshow(im, aspect='equal')
+    ax.imshow(im, aspect='equal')
     for i in inds:
         bbox = dets[i, :4]
         score = dets[i, -1]
@@ -63,7 +66,6 @@ def vis_detections(im, class_name, dets, thresh=0.5):
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
-    return new_im.get_array() 
 
 def detect_person(net, im):
     """Detect object classes in an image using pre-computed object proposals."""
@@ -89,8 +91,7 @@ def detect_person(net, im):
                       cls_scores[:, np.newaxis])).astype(np.float32)
     keep = nms(dets, NMS_THRESH)
     dets = dets[keep, :]
-    new_im = vis_detections(im, cls, dets, thresh=CONF_THRESH)
-    return new_im
+    vis_detections(im, cls, dets, thresh=CONF_THRESH)
         
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(levelname)s: %(message)s')
@@ -127,24 +128,38 @@ if __name__ == "__main__":
         width = int(video_reader.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
         height = int(video_reader.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
 
-        # Define the codec and create VideoWriter object
+        # MP4 codec does not work with OpenCV 2.4
+        fourcc = cv2.cv.CV_FOURCC(*'XVID')
         video_writer = cv2.VideoWriter(args.output_video, fourcc, fps, (width, height))
-    
+        if not video_writer.isOpened():
+            logger.error('Cannot open file for writing: %s', args.output_video)
+            
         while(video_reader.isOpened()):
             ret, frame = video_reader.read()
 
             if ret==True:
                 #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                #cv2.imshow('frame', frame)
-                new_frame = detect_person(net, frame)
-                #out.write(frame)
-                cv2.imshow('frame', new_frame)
+                detect_person(net, frame)
+                
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight')
+                buf.seek(0)
+                im = PIL.Image.open(buf).convert('RGB') 
+                im = np.array(im) 
+                # Convert RGB to BGR 
+                im = im[:, :, ::-1].copy()
+                im = cv2.resize(im, (width, height)) 
+                cv2.imshow('frame', im)
+                video_writer.write(im)
+                buf.close()
+                plt.close()
             else:
                 break
                 
             if cv2.waitKey(10) & 0xFF == ord('q'):
                 break
-
+        
+        video_writer.release()
         video_reader.release()
         cv2.destroyAllWindows()
         
