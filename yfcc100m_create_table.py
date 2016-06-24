@@ -1,18 +1,19 @@
-#!/usr/bin/env python
-
-# --------------------------------------------------------
-# Copyright (c) 2015 NII
-# Written by Sang Phan
-# --------------------------------------------------------
+"""
+Read the YFCC100M metadata and insert them into a MongoDB database
+"""
 
 import os
 import sys
 import os.path
-import tables
-from tables import *
 import urllib
+from pymongo import MongoClient
+import argparse, json
+import logging
+from datetime import datetime
 
 from HTMLParser import HTMLParser
+
+logger = logging.getLogger(__name__)
 
 class MLStripper(HTMLParser):
     def __init__(self):
@@ -28,56 +29,43 @@ def strip_tags(html):
     s.feed(html)
     return s.get_data()
 
-class Video(IsDescription):
-    id              = StringCol(16)   # 16-character String
-    title           = StringCol(256)   # 16-character String
-    description     = StringCol(512)   # 16-character String
-    user_tags       = StringCol(128)   # 16-character String
-    machine_tags    = StringCol(128)   # 16-character String
-    part_id         = Int8Col()      
-    
-    
-            
+######################################################################
+
 if __name__ == '__main__':
 
-    parts = ['yfcc100m_dataset-'+str(i) for i in range(0,10)]
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(levelname)s: %(message)s')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_dir', type=str, default='/net/per610a/export/das11f/plsang/dataset/YFCC100M', help='Path to the input directory!')
+    parser.add_argument('--dbname', type=str, default='yfcc100m', help='Name of the mongodb datbase')
+    parser.add_argument('--collection', type=str, default='metadata', help='Name of mongodb collection')
     
-    input_dir = '/net/per610a/export/das11f/plsang/dataset/YFCC100M'
-    output_dir = '/net/per920a/export/das14a/satoh-lab/plsang/yfcc100m/metadata'
-
-    h5file = open_file("/net/per610a/export/das11f/plsang/codes/yfcc100m/view/data/metadata/yfcc100m.h5", mode = "w", title = "YFCC100M")    
+    args = parser.parse_args()
+    logger.info('Command-line arguments: %s', args)
     
-    group = h5file.create_group("/", 'video', 'Yfcc100m video')
-    
-    table_name = 'yfcc100m'
+    logger.info('Starting mongodb client')
+    client = MongoClient()
+    db = client[args.dbname]
+    collection = db[args.collection]
         
-    table = h5file.create_table(group, table_name, Video, "Yfcc100m dataset")
+    start = datetime.now()
     
-    video = table.row
+    parts = ['yfcc100m_dataset-'+str(i) for i in range(0,10)]
         
     for part in parts:
-        
-        print 'Gen table for part', part
-        
-        meta_file = os.path.join(input_dir, part)
+        logger.info('Inserting metadata for part: %s', part)
+        meta_file = os.path.join(args.input_dir, part)
         
         with open(meta_file) as f:
             for line in f:
                 info = line.rstrip('\n').split('\t');
                 if info[-1] == '1':
+                    video = {}
                     video['id'] = info[0]
                     video['title'] = strip_tags(urllib.unquote_plus(info[6]))
                     video['description'] = strip_tags(urllib.unquote_plus(info[7]))
                     video['user_tags'] = strip_tags(urllib.unquote_plus(info[8]))
                     video['machine_tags'] = strip_tags(urllib.unquote_plus(info[9]))
                     video['part_id'] = parts.index(part)
-                    video.append()
+                    collection.insert_one(video)
                     
-        table.flush()
-        #print table[0]['id'], table[0]['title'], table[0]['description'], table[0]['user_tags'], table[0]['machine_tags'], 
-        #print '-- ID:', table[0]['id']
-        #print '-- Title:', table[0]['title']
-        #print '-- Description:', table[0]['description']
-        #print '-- User tags:', table[0]['user_tags']
-        #print '-- Machine tags:', table[0]['machine_tags']
-        
+    logger.info('Time: %s', datetime.now() - start)
