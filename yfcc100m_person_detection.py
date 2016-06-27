@@ -128,6 +128,10 @@ if __name__ == '__main__':
             logger.warning('File not exist: %s', video_file)
             continue
         
+        if person_collection.find({'id': info[0]}).count() > 0:
+            logger.info('[%d/%d] Skip detecting human in video: %s', ii-start_video, end_video-start_video, video_file)
+            continue
+            
         logger.info('[%d/%d] Detecting human in video: %s', ii-start_video, end_video-start_video, video_file)
         
         video_reader = cv2.VideoCapture(video_file)
@@ -159,7 +163,7 @@ if __name__ == '__main__':
             video['id'] = info[0]
             video['fps'] = fps
             video['frame_count'] = frame_count
-            video['num_person'] = max(persons)
+            video['num_person'] = 0 if not persons else max(persons) 
             video['frames'] = frames
             video['persons'] = persons
             video['boxes'] = boxes
