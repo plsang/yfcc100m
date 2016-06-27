@@ -2,7 +2,7 @@
 
 ## Download YFCC100M dataset
 
-## Installation
+## Requirements
 * [Faster RCNN](https://github.com/rbgirshick/py-faster-rcnn)
 * OpenCV (built with ffmpeg and Python binding)
 * PyMongo
