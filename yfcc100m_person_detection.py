@@ -146,18 +146,23 @@ if __name__ == '__main__':
             frames = []
             persons = []
             boxes = []
-            while(video_reader.isOpened()):
-                frame_number = int(round(video_reader.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
-                ret, frame = video_reader.read()
-                if ret==True:
-                    if frame_number % frame_interval == 0:
-                        dets = detect_person(net, frame, det_opt)
-                        frames.append(frame_number)
-                        persons.append(dets.shape[0])
-                        boxes.append(dets.tolist())
-                else:
-                    break
-            video_reader.release()
+            
+            try:
+                while(video_reader.isOpened()):
+                    frame_number = int(round(video_reader.get(cv2.cv.CV_CAP_PROP_POS_FRAMES)))
+                    ret, frame = video_reader.read()
+                    if ret==True:
+                        if frame_number % frame_interval == 0:
+                            dets = detect_person(net, frame, det_opt)
+                            frames.append(frame_number)
+                            persons.append(dets.shape[0])
+                            boxes.append(dets.tolist())
+                    else:
+                        break
+            except:
+                logger.warning("Unexpected error: %s", sys.exc_info()[0])
+            finally:    
+                video_reader.release()
             
             video = {}
             video['id'] = info[0]
